@@ -28,7 +28,7 @@ export default function Promoters() {
     name: "",
     email: "",
     phone: "",
-    commission_percentage: 10,
+    commission_percentage: 5,
     is_active: true,
   });
   const { toast } = useToast();
@@ -135,7 +135,7 @@ export default function Promoters() {
       name: "",
       email: "",
       phone: "",
-      commission_percentage: 10,
+      commission_percentage: 5,
       is_active: true,
     });
     setEditingPromoter(null);
@@ -226,20 +226,20 @@ export default function Promoters() {
                 <Input
                   id="commission"
                   type="number"
-                  step="0.5"
+                  step="any"
                   min="0"
                   max="100"
-                  value={formData.commission_percentage}
+                  value={formData.commission_percentage ?? ""}
                   onChange={(e) =>
                     setFormData({
                       ...formData,
-                      commission_percentage: parseFloat(e.target.value) || 0,
+                      commission_percentage: e.target.value === "" ? undefined : parseFloat(e.target.value),
                     })
                   }
                   className="bg-input border-border"
-                  placeholder="e.g., 10"
+                  placeholder="5"
                 />
-                <p className="text-xs text-muted-foreground">Percentage of total sales</p>
+                <p className="text-xs text-muted-foreground">Enter any percentage (e.g., 5, 13, 7.5)</p>
               </div>
               <div className="flex items-center justify-between">
                 <Label htmlFor="active">Active Status</Label>
