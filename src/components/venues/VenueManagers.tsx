@@ -73,11 +73,12 @@ export function VenueManagers({ venueId }: VenueManagersProps) {
   });
 
   // Fetch pending invites (managers added by email but not yet signed up)
+  // Using rpc or direct query with type assertion since table is new
   const { data: pendingInvites } = useQuery({
     queryKey: ["pending-venue-manager-invites", venueId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("venue_manager_invites")
+        .from("venue_manager_invites" as any)
         .select("*")
         .eq("venue_id", venueId)
         .eq("status", "pending");
@@ -85,9 +86,16 @@ export function VenueManagers({ venueId }: VenueManagersProps) {
       if (error) {
         // Table might not exist yet, return empty array
         if (error.code === "42P01") return [];
-        throw error;
+        console.error("Error fetching invites:", error);
+        return [];
       }
-      return data || [];
+      return (data || []) as unknown as Array<{
+        id: string;
+        email: string;
+        venue_id: string;
+        status: string;
+        created_at: string;
+      }>;
     },
   });
 
@@ -118,11 +126,13 @@ export function VenueManagers({ venueId }: VenueManagersProps) {
         return { type: "linked", email: managerEmail };
       } else {
         // User doesn't exist, create an invite
-        const { error } = await supabase.from("venue_manager_invites").insert({
-          email: managerEmail.toLowerCase().trim(),
-          venue_id: venueId,
-          status: "pending",
-        });
+        const { error } = await supabase
+          .from("venue_manager_invites" as any)
+          .insert({
+            email: managerEmail.toLowerCase().trim(),
+            venue_id: venueId,
+            status: "pending",
+          });
 
         if (error) {
           if (error.code === "23505") {
@@ -190,7 +200,7 @@ export function VenueManagers({ venueId }: VenueManagersProps) {
   const removeInvite = useMutation({
     mutationFn: async (inviteId: string) => {
       const { error } = await supabase
-        .from("venue_manager_invites")
+        .from("venue_manager_invites" as any)
         .delete()
         .eq("id", inviteId);
 

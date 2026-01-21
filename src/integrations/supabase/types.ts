@@ -643,6 +643,38 @@ export type Database = {
           },
         ]
       }
+      venue_manager_invites: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          status: string
+          venue_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          status?: string
+          venue_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          status?: string
+          venue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "venue_manager_invites_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       venue_managers: {
         Row: {
           created_at: string
