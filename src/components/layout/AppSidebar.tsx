@@ -6,9 +6,9 @@ import {
   QrCode, 
   Bell, 
   Settings,
-  LogOut,
-  Music
+  LogOut
 } from "lucide-react";
+import blsLogo from "@/assets/bls-logo.png";
 import { NavLink, useLocation } from "react-router-dom";
 import {
   Sidebar,
@@ -57,16 +57,12 @@ export function AppSidebar() {
   return (
     <Sidebar className="border-r border-sidebar-border">
       <SidebarHeader className="p-4 border-b border-sidebar-border">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl gradient-gold flex items-center justify-center glow-gold">
-            <Music className="w-5 h-5 text-primary-foreground" />
-          </div>
-          {!isCollapsed && (
-            <div className="flex flex-col">
-              <span className="font-semibold text-foreground text-sm">Bali Live</span>
-              <span className="text-xs text-muted-foreground">Sessions Admin</span>
-            </div>
-          )}
+        <div className="flex items-center justify-center">
+          <img 
+            src={blsLogo} 
+            alt="Bali Live Sessions" 
+            className={`invert transition-all duration-200 ${isCollapsed ? 'h-8 w-auto' : 'h-10 w-auto'}`}
+          />
         </div>
       </SidebarHeader>
 

@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Music, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import blsLogo from "@/assets/bls-logo.png";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -63,17 +64,16 @@ export default function Login() {
       
       <Card className="w-full max-w-md relative z-10 bg-card/80 backdrop-blur-xl border-border/50">
         <CardHeader className="text-center space-y-4">
-          <div className="mx-auto w-16 h-16 rounded-2xl gradient-gold flex items-center justify-center glow-gold">
-            <Music className="w-8 h-8 text-primary-foreground" />
+          <div className="mx-auto">
+            <img 
+              src={blsLogo} 
+              alt="Bali Live Sessions" 
+              className="h-16 w-auto invert"
+            />
           </div>
-          <div>
-            <CardTitle className="text-2xl font-bold text-foreground">
-              Bali Live Sessions
-            </CardTitle>
-            <CardDescription className="text-muted-foreground mt-1">
-              Admin Dashboard
-            </CardDescription>
-          </div>
+          <CardDescription className="text-muted-foreground">
+            Admin Dashboard
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleAuth} className="space-y-4">
