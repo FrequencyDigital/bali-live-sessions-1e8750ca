@@ -174,7 +174,7 @@ export default function PromoterLogin() {
                 ) : (
                   <>
                     <Mail className="w-4 h-4 mr-2" />
-                    Send Login Code
+                    Send Login Email
                   </>
                 )}
               </Button>
