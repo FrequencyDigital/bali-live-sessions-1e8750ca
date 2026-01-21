@@ -23,6 +23,7 @@ import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import QRCode from "qrcode";
 import { useEffect, useState } from "react";
+import { ShareInviteDialog } from "@/components/promoter/ShareInviteDialog";
 
 export default function PromoterEventDetail() {
   const { id: eventId } = useParams<{ id: string }>();
@@ -249,12 +250,30 @@ export default function PromoterEventDetail() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Share2 className="w-5 h-5" />
-              Share Tools
+              Share & Invite
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Share your guestlist link with friends. Anyone who registers is added to your list.
+            </p>
+            
+            <ShareInviteDialog
+              eventName={event.name}
+              eventDate={format(new Date(event.date), "EEEE, MMMM d")}
+              venue={event.venue}
+              guestlistUrl={registrationUrl}
+              promoterName={promoter?.name || ""}
+              trigger={
+                <Button className="w-full gap-2">
+                  <Share2 className="w-4 h-4" />
+                  Share Invite
+                </Button>
+              }
+            />
+
             <div>
-              <label className="text-sm text-muted-foreground">Guestlist Link</label>
+              <label className="text-sm text-muted-foreground">Direct Link</label>
               <div className="flex gap-2 mt-1">
                 <input
                   type="text"
