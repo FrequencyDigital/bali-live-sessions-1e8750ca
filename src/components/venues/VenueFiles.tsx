@@ -57,6 +57,7 @@ export function VenueFiles({ venueId }: VenueFilesProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [isExtracting, setIsExtracting] = useState(false);
   const [fileType, setFileType] = useState<VenueFile["file_type"]>("drinks_menu");
+  const [customFileName, setCustomFileName] = useState("");
   const [extractedItems, setExtractedItems] = useState<ExtractedMenuItem[]>([]);
   const [showReviewDialog, setShowReviewDialog] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -164,12 +165,16 @@ export function VenueFiles({ venueId }: VenueFilesProps) {
         .from("venue-files")
         .getPublicUrl(fileName);
 
-      // Save to database
+      // Save to database - use custom name for "other" type if provided
+      const displayName = fileType === "other" && customFileName.trim() 
+        ? customFileName.trim() 
+        : file.name;
+      
       const { error: dbError } = await supabase.from("venue_files").insert({
         venue_id: venueId,
         file_type: fileType,
         file_url: urlData.publicUrl,
-        file_name: file.name,
+        file_name: displayName,
       });
 
       if (dbError) throw dbError;
@@ -189,6 +194,7 @@ export function VenueFiles({ venueId }: VenueFilesProps) {
       toast({ title: "Error", description: message, variant: "destructive" });
     } finally {
       setIsUploading(false);
+      setCustomFileName("");
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
@@ -292,7 +298,10 @@ export function VenueFiles({ venueId }: VenueFilesProps) {
           <div className="flex items-end gap-4">
             <div className="space-y-2 flex-1">
               <Label>File Type</Label>
-              <Select value={fileType} onValueChange={(v) => setFileType(v as VenueFile["file_type"])}>
+              <Select value={fileType} onValueChange={(v) => {
+                setFileType(v as VenueFile["file_type"]);
+                if (v !== "other") setCustomFileName("");
+              }}>
                 <SelectTrigger className="bg-input border-border">
                   <SelectValue />
                 </SelectTrigger>
@@ -303,6 +312,17 @@ export function VenueFiles({ venueId }: VenueFilesProps) {
                 </SelectContent>
               </Select>
             </div>
+            {fileType === "other" && (
+              <div className="space-y-2 flex-1">
+                <Label>Document Name</Label>
+                <Input
+                  value={customFileName}
+                  onChange={(e) => setCustomFileName(e.target.value)}
+                  placeholder="e.g., Floor Plan, Contract"
+                  className="bg-input border-border"
+                />
+              </div>
+            )}
             <input
               ref={fileInputRef}
               type="file"
