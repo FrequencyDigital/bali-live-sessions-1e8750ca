@@ -5,10 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, MapPin, Clock, QrCode, ArrowRight } from "lucide-react";
+import { Calendar, MapPin, Clock, QrCode, ArrowRight, Share2 } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { ShareInviteDialog } from "@/components/promoter/ShareInviteDialog";
 
 export default function PromoterEvents() {
   const { promoter } = usePromoter();
@@ -91,6 +92,9 @@ export default function PromoterEvents() {
   const isPromoting = (eventId: string) =>
     myEventQrs?.some((q) => q.event_id === eventId);
 
+  const getEventQr = (eventId: string) =>
+    myEventQrs?.find((q) => q.event_id === eventId);
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -161,14 +165,29 @@ export default function PromoterEvents() {
                 )}
                 <div className="flex items-center gap-3">
                   {isPromoting(event.id) ? (
-                    <Button
-                      variant="outline"
-                      onClick={() => navigate(`/promoter/events/${event.id}`)}
-                      className="gap-2"
-                    >
-                      View Details
-                      <ArrowRight className="w-4 h-4" />
-                    </Button>
+                    <>
+                      <ShareInviteDialog
+                        eventName={event.name}
+                        eventDate={format(new Date(event.date), "EEEE, MMMM d")}
+                        venue={event.venue}
+                        guestlistUrl={`${window.location.origin}/guestlist/${getEventQr(event.id)?.qr_code_identifier}`}
+                        promoterName={promoter?.name || ""}
+                        trigger={
+                          <Button className="gap-2">
+                            <Share2 className="w-4 h-4" />
+                            Share Invite
+                          </Button>
+                        }
+                      />
+                      <Button
+                        variant="outline"
+                        onClick={() => navigate(`/promoter/events/${event.id}`)}
+                        className="gap-2"
+                      >
+                        View Details
+                        <ArrowRight className="w-4 h-4" />
+                      </Button>
+                    </>
                   ) : (
                     <Button
                       onClick={() => promoteEventMutation.mutate(event.id)}
