@@ -38,6 +38,7 @@ const App = () => (
           <Route path="/login" element={<Login />} />
           <Route path="/promoter/login" element={<PromoterLogin />} />
           <Route path="/guestlist/:code" element={<Guestlist />} />
+          <Route path="/guestlist" element={<Guestlist />} />
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           
           {/* Admin Routes */}

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,9 @@ import {
   CheckCircle2,
   Sparkles,
   PartyPopper,
+  CalendarPlus,
+  Share2,
+  Heart,
 } from "lucide-react";
 import { format } from "date-fns";
 import blsLogo from "@/assets/bls-logo.png";
@@ -50,11 +53,32 @@ const NATIONALITIES = [
   "Other",
 ];
 
+// Simple device fingerprint (basic browser info)
+const getDeviceFingerprint = () => {
+  const nav = window.navigator;
+  const screen = window.screen;
+  return btoa(
+    [
+      nav.userAgent,
+      nav.language,
+      screen.width,
+      screen.height,
+      screen.colorDepth,
+      new Date().getTimezoneOffset(),
+    ].join("|")
+  ).slice(0, 64);
+};
+
+type RegistrationState = "form" | "already-registered" | "success";
+
 export default function Guestlist() {
   const { code } = useParams<{ code: string }>();
-  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const eventIdParam = searchParams.get("event");
   const { toast } = useToast();
-  const [isSubmitted, setIsSubmitted] = useState(false);
+  
+  const [registrationState, setRegistrationState] = useState<RegistrationState>("form");
+  const [existingRegistration, setExistingRegistration] = useState<any>(null);
 
   // Form state
   const [fullName, setFullName] = useState("");
@@ -63,8 +87,12 @@ export default function Guestlist() {
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [nationality, setNationality] = useState("");
 
-  // Fetch promoter event QR data
-  const { data: qrData, isLoading: qrLoading, error: qrError } = useQuery({
+  // Determine if this is a promoter link or generic BLS link
+  const isPromoterLink = !!code;
+  const isGenericLink = !code && !!eventIdParam;
+
+  // Fetch promoter event QR data (for promoter links)
+  const { data: qrData, isLoading: qrLoading } = useQuery({
     queryKey: ["guestlist-qr", code],
     queryFn: async () => {
       if (!code) return null;
@@ -76,6 +104,8 @@ export default function Guestlist() {
           promoter_id,
           event_id,
           qr_code_identifier,
+          scans_count,
+          registrations_count,
           promoters (
             id,
             name,
@@ -98,10 +128,35 @@ export default function Guestlist() {
       if (error) throw error;
       return data;
     },
-    enabled: !!code,
+    enabled: isPromoterLink,
   });
 
-  // Track QR scan
+  // Fetch event data directly (for generic BLS links)
+  const { data: directEvent, isLoading: eventLoading } = useQuery({
+    queryKey: ["guestlist-event", eventIdParam],
+    queryFn: async () => {
+      if (!eventIdParam) return null;
+
+      const { data, error } = await supabase
+        .from("events")
+        .select("*")
+        .eq("id", eventIdParam)
+        .eq("status", "upcoming")
+        .maybeSingle();
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: isGenericLink,
+  });
+
+  // Derived event data
+  const event = isPromoterLink ? (qrData?.events as any) : directEvent;
+  const promoter = isPromoterLink ? (qrData?.promoters as any) : null;
+  const eventId = event?.id;
+  const promoterId = isPromoterLink ? qrData?.promoter_id : null;
+
+  // Track QR scan (only for promoter links)
   useEffect(() => {
     if (qrData?.promoter_id && qrData?.event_id) {
       // Record the scan (fire and forget)
@@ -112,19 +167,62 @@ export default function Guestlist() {
           event_id: qrData.event_id,
         })
         .then(() => {
-          // Update scan count on promoter_event_qr
+          // Update scan count
           supabase
             .from("promoter_event_qr")
-            .update({ scans_count: (qrData as any).scans_count + 1 })
+            .update({ scans_count: (qrData.scans_count || 0) + 1 })
             .eq("id", qrData.id);
         });
     }
   }, [qrData]);
 
+  // Check for duplicate registration
+  const checkDuplicate = async (emailVal: string, whatsappVal: string) => {
+    if (!eventId) return null;
+
+    const normalizedEmail = emailVal.trim().toLowerCase();
+    const normalizedWhatsapp = whatsappVal.trim().replace(/\D/g, "");
+
+    // Check by email
+    const { data: byEmail } = await supabase
+      .from("guests")
+      .select("id, full_name, promoter_id, promoters(name)")
+      .eq("event_id", eventId)
+      .ilike("email", normalizedEmail)
+      .maybeSingle();
+
+    if (byEmail) return byEmail;
+
+    // Check by WhatsApp (normalize to digits only for comparison)
+    const { data: allGuests } = await supabase
+      .from("guests")
+      .select("id, full_name, whatsapp_number, promoter_id, promoters(name)")
+      .eq("event_id", eventId);
+
+    const byWhatsapp = allGuests?.find((g) => {
+      const guestWa = g.whatsapp_number?.replace(/\D/g, "") || "";
+      return guestWa === normalizedWhatsapp || 
+             guestWa.endsWith(normalizedWhatsapp) || 
+             normalizedWhatsapp.endsWith(guestWa);
+    });
+
+    return byWhatsapp || null;
+  };
+
   // Submit registration
   const registerMutation = useMutation({
     mutationFn: async () => {
-      if (!qrData) throw new Error("Invalid guestlist link");
+      if (!eventId) throw new Error("Invalid guestlist link");
+
+      // Anti-duplicate check
+      const duplicate = await checkDuplicate(email, whatsapp);
+      if (duplicate) {
+        setExistingRegistration(duplicate);
+        setRegistrationState("already-registered");
+        return { duplicate: true };
+      }
+
+      const deviceFingerprint = getDeviceFingerprint();
 
       const { error } = await supabase.from("guests").insert({
         full_name: fullName.trim(),
@@ -132,8 +230,8 @@ export default function Guestlist() {
         whatsapp_number: whatsapp.trim(),
         date_of_birth: dateOfBirth || null,
         nationality: nationality || null,
-        event_id: qrData.event_id,
-        promoter_id: qrData.promoter_id,
+        event_id: eventId,
+        promoter_id: promoterId, // null for generic links, promoter ID for promoter links
       });
 
       if (error) {
@@ -143,18 +241,24 @@ export default function Guestlist() {
         throw error;
       }
 
-      // Update registration count
-      await supabase
-        .from("promoter_event_qr")
-        .update({ registrations_count: ((qrData as any).registrations_count || 0) + 1 })
-        .eq("id", qrData.id);
+      // Update registration count (only for promoter links)
+      if (qrData) {
+        await supabase
+          .from("promoter_event_qr")
+          .update({ registrations_count: (qrData.registrations_count || 0) + 1 })
+          .eq("id", qrData.id);
+      }
+
+      return { duplicate: false };
     },
-    onSuccess: () => {
-      setIsSubmitted(true);
-      toast({
-        title: "You're on the list! 🎉",
-        description: "See you at the event!",
-      });
+    onSuccess: (result) => {
+      if (!result?.duplicate) {
+        setRegistrationState("success");
+        toast({
+          title: "You're on the list! 🎉",
+          description: "See you at the event!",
+        });
+      }
     },
     onError: (error: any) => {
       toast({
@@ -170,8 +274,43 @@ export default function Guestlist() {
     registerMutation.mutate();
   };
 
+  // Calendar event generation
+  const addToCalendar = () => {
+    if (!event) return;
+    
+    const startDate = new Date(`${event.date}T${event.time}`);
+    const endDate = new Date(startDate.getTime() + 4 * 60 * 60 * 1000); // +4 hours
+    
+    const formatDate = (d: Date) => d.toISOString().replace(/-|:|\.\d{3}/g, "");
+    
+    const calUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(event.name)}&dates=${formatDate(startDate)}/${formatDate(endDate)}&location=${encodeURIComponent(event.venue)}&details=${encodeURIComponent(`You're on the guestlist for ${event.name}!`)}`;
+    
+    window.open(calUrl, "_blank");
+  };
+
+  // Share generic link (no promoter hijack)
+  const shareEvent = async () => {
+    if (!event) return;
+    
+    const shareUrl = `${window.location.origin}/guestlist?event=${event.id}`;
+    const shareText = `Join me at ${event.name}! 🎶\n${format(new Date(event.date), "EEEE, MMMM d")} at ${event.venue}\n\nGet on the free guestlist: ${shareUrl}`;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({ text: shareText });
+      } catch (err) {
+        // User cancelled
+      }
+    } else {
+      navigator.clipboard.writeText(shareText);
+      toast({ title: "Link copied!", description: "Share it with your friends." });
+    }
+  };
+
   // Loading state
-  if (qrLoading) {
+  const isLoading = qrLoading || eventLoading;
+  
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -180,10 +319,10 @@ export default function Guestlist() {
   }
 
   // Invalid or expired link
-  if (!qrData || qrError) {
+  if (!event) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <Card className="w-full max-w-md text-center">
+        <Card className="w-full max-w-md text-center bg-card/80 backdrop-blur-xl border-border/50">
           <CardContent className="pt-8 pb-6">
             <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-destructive/10 flex items-center justify-center">
               <span className="text-3xl">😕</span>
@@ -198,14 +337,11 @@ export default function Guestlist() {
     );
   }
 
-  const event = qrData.events as any;
-  const promoter = qrData.promoters as any;
-
   // Event is not upcoming
   if (event?.status !== "upcoming") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <Card className="w-full max-w-md text-center">
+        <Card className="w-full max-w-md text-center bg-card/80 backdrop-blur-xl border-border/50">
           <CardContent className="pt-8 pb-6">
             <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
               <Calendar className="w-8 h-8 text-muted-foreground" />
@@ -220,8 +356,8 @@ export default function Guestlist() {
     );
   }
 
-  // Success state
-  if (isSubmitted) {
+  // Already registered state
+  if (registrationState === "already-registered") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -231,14 +367,14 @@ export default function Guestlist() {
 
         <Card className="w-full max-w-md text-center relative z-10 bg-card/80 backdrop-blur-xl border-border/50">
           <CardContent className="pt-8 pb-6">
-            <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-primary/20 flex items-center justify-center animate-pulse">
-              <PartyPopper className="w-10 h-10 text-primary" />
+            <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-primary/20 flex items-center justify-center">
+              <Heart className="w-10 h-10 text-primary" />
             </div>
-            <h2 className="text-2xl font-bold mb-2">You're on the list!</h2>
+            <h2 className="text-2xl font-bold mb-2">You're already on the guestlist! 🙌</h2>
             <p className="text-muted-foreground mb-6">
-              We'll see you at <span className="font-semibold text-foreground">{event?.name}</span>
+              We can't wait to see you at <span className="font-semibold text-foreground">{event?.name}</span>
             </p>
-            <div className="bg-muted/50 rounded-lg p-4 text-left space-y-2">
+            <div className="bg-muted/50 rounded-lg p-4 text-left space-y-2 mb-6">
               <div className="flex items-center gap-2 text-sm">
                 <Calendar className="w-4 h-4 text-primary" />
                 <span>{event?.date && format(new Date(event.date), "EEEE, MMMM d, yyyy")}</span>
@@ -252,12 +388,74 @@ export default function Guestlist() {
                 <span>{event?.venue}</span>
               </div>
             </div>
+            <div className="flex gap-3">
+              <Button onClick={addToCalendar} variant="outline" className="flex-1 gap-2">
+                <CalendarPlus className="w-4 h-4" />
+                Save to Calendar
+              </Button>
+              <Button onClick={shareEvent} variant="outline" className="flex-1 gap-2">
+                <Share2 className="w-4 h-4" />
+                Share
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
     );
   }
 
+  // Success state
+  if (registrationState === "success") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
+          <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-violet-500/10 rounded-full blur-3xl" />
+        </div>
+
+        <Card className="w-full max-w-md text-center relative z-10 bg-card/80 backdrop-blur-xl border-border/50">
+          <CardContent className="pt-8 pb-6">
+            <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-primary/20 flex items-center justify-center animate-pulse">
+              <PartyPopper className="w-10 h-10 text-primary" />
+            </div>
+            <h2 className="text-2xl font-bold mb-2">You're on the list! 🎶</h2>
+            <p className="text-muted-foreground mb-2">
+              Doors open at <span className="font-semibold text-foreground">{event?.time?.slice(0, 5)}</span>
+            </p>
+            <p className="text-lg font-medium text-foreground mb-6">
+              See you at Bali Live Sessions.
+            </p>
+            <div className="bg-muted/50 rounded-lg p-4 text-left space-y-2 mb-6">
+              <div className="flex items-center gap-2 text-sm">
+                <Calendar className="w-4 h-4 text-primary" />
+                <span>{event?.date && format(new Date(event.date), "EEEE, MMMM d, yyyy")}</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <Clock className="w-4 h-4 text-primary" />
+                <span>{event?.time?.slice(0, 5)}</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <MapPin className="w-4 h-4 text-primary" />
+                <span>{event?.venue}</span>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <Button onClick={addToCalendar} variant="outline" className="flex-1 gap-2">
+                <CalendarPlus className="w-4 h-4" />
+                Save to Calendar
+              </Button>
+              <Button onClick={shareEvent} variant="outline" className="flex-1 gap-2">
+                <Share2 className="w-4 h-4" />
+                Share with a Friend
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Registration form
   return (
     <div className="min-h-screen bg-background">
       {/* Background */}
@@ -304,11 +502,14 @@ export default function Guestlist() {
                 <CardDescription className="mt-3">{event.description}</CardDescription>
               )}
 
-              {promoter?.name && (
-                <p className="text-xs text-muted-foreground mt-3">
-                  Invited by <span className="text-foreground font-medium">{promoter.name}</span>
-                </p>
-              )}
+              {/* Attribution display */}
+              <p className="text-xs text-muted-foreground mt-3">
+                {promoter?.name ? (
+                  <>Invited by <span className="text-foreground font-medium">{promoter.name}</span></>
+                ) : (
+                  <>Presented by <span className="text-foreground font-medium">Bali Live Sessions</span></>
+                )}
+              </p>
             </CardHeader>
 
             <CardContent>
@@ -353,19 +554,20 @@ export default function Guestlist() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="dob">Date of Birth</Label>
+                    <Label htmlFor="dob">Date of Birth *</Label>
                     <Input
                       id="dob"
                       type="date"
                       value={dateOfBirth}
                       onChange={(e) => setDateOfBirth(e.target.value)}
+                      required
                       className="bg-input/50 border-border/50"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="nationality">Nationality</Label>
-                    <Select value={nationality} onValueChange={setNationality}>
+                    <Label htmlFor="nationality">Nationality *</Label>
+                    <Select value={nationality} onValueChange={setNationality} required>
                       <SelectTrigger className="bg-input/50 border-border/50">
                         <SelectValue placeholder="Select" />
                       </SelectTrigger>
@@ -383,7 +585,7 @@ export default function Guestlist() {
                 <Button
                   type="submit"
                   className="w-full gradient-purple text-primary-foreground font-semibold text-lg py-6"
-                  disabled={registerMutation.isPending}
+                  disabled={registerMutation.isPending || !nationality}
                 >
                   {registerMutation.isPending ? (
                     <Loader2 className="w-5 h-5 animate-spin" />
