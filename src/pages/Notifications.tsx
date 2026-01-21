@@ -137,7 +137,7 @@ export default function Notifications() {
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="gradient-gold text-primary-foreground hover:opacity-90">
+            <Button className="gradient-purple text-primary-foreground hover:opacity-90">
               <Send className="w-4 h-4 mr-2" />
               Send Notification
             </Button>
@@ -241,7 +241,7 @@ export default function Notifications() {
                 <Button type="button" variant="outline" onClick={resetForm}>
                   Cancel
                 </Button>
-                <Button type="submit" className="gradient-gold text-primary-foreground">
+                <Button type="submit" className="gradient-purple text-primary-foreground">
                   <Send className="w-4 h-4 mr-2" />
                   Send
                 </Button>

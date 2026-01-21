@@ -47,13 +47,13 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        gold: {
-          DEFAULT: "hsl(var(--gold))",
-          muted: "hsl(var(--gold-muted))",
+        purple: {
+          DEFAULT: "hsl(var(--purple))",
+          muted: "hsl(var(--purple-muted))",
         },
-        coral: {
-          DEFAULT: "hsl(var(--coral))",
-          muted: "hsl(var(--coral-muted))",
+        violet: {
+          DEFAULT: "hsl(var(--violet))",
+          muted: "hsl(var(--violet-muted))",
         },
         success: {
           DEFAULT: "hsl(var(--success))",

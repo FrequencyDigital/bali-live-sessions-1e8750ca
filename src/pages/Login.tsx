@@ -60,7 +60,7 @@ export default function Login() {
       {/* Background gradient */}
       <div className="absolute inset-0 gradient-dark" />
       <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
-      <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-coral/10 rounded-full blur-3xl" />
+      <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-violet/10 rounded-full blur-3xl" />
       
       <Card className="w-full max-w-md relative z-10 bg-card/80 backdrop-blur-xl border-border/50">
         <CardHeader className="text-center space-y-4">
@@ -103,7 +103,7 @@ export default function Login() {
             </div>
             <Button
               type="submit"
-              className="w-full gradient-gold text-primary-foreground font-semibold hover:opacity-90 transition-opacity"
+              className="w-full gradient-purple text-primary-foreground font-semibold hover:opacity-90 transition-opacity"
               disabled={isLoading}
             >
               {isLoading ? (

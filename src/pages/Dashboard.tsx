@@ -75,8 +75,8 @@ export default function Dashboard() {
       title: "Total Guests",
       value: totalGuests,
       icon: Users,
-      color: "text-coral",
-      bgColor: "bg-coral/10",
+      color: "text-violet",
+      bgColor: "bg-violet/10",
     },
     {
       title: "Active Promoters",
@@ -89,8 +89,8 @@ export default function Dashboard() {
       title: "QR Scans",
       value: totalScans,
       icon: QrCode,
-      color: "text-gold",
-      bgColor: "bg-gold/10",
+      color: "text-purple",
+      bgColor: "bg-purple/10",
     },
   ];
 
@@ -111,7 +111,7 @@ export default function Dashboard() {
               Add Promoter
             </Link>
           </Button>
-          <Button asChild className="gradient-gold text-primary-foreground hover:opacity-90">
+          <Button asChild className="gradient-purple text-primary-foreground hover:opacity-90">
             <Link to="/events">
               <Plus className="w-4 h-4 mr-2" />
               Create Event
@@ -166,7 +166,7 @@ export default function Dashboard() {
                   key={event.id}
                   className="flex items-center gap-4 p-4 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors"
                 >
-                  <div className="w-14 h-14 rounded-lg gradient-gold-subtle flex flex-col items-center justify-center">
+                  <div className="w-14 h-14 rounded-lg gradient-purple-subtle flex flex-col items-center justify-center">
                     <span className="text-xs font-medium text-primary">
                       {format(new Date(event.date), "MMM")}
                     </span>
@@ -226,7 +226,7 @@ export default function Dashboard() {
                   key={promoter.id}
                   className="flex items-center gap-4 p-4 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors"
                 >
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-coral flex items-center justify-center text-primary-foreground font-bold">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-violet flex items-center justify-center text-primary-foreground font-bold">
                     {index + 1}
                   </div>
                   <div className="flex-1 min-w-0">

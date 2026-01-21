@@ -177,7 +177,7 @@ export default function Promoters() {
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="gradient-gold text-primary-foreground hover:opacity-90">
+            <Button className="gradient-purple text-primary-foreground hover:opacity-90">
               <Plus className="w-4 h-4 mr-2" />
               Add Promoter
             </Button>
@@ -251,7 +251,7 @@ export default function Promoters() {
                 <Button type="button" variant="outline" onClick={resetForm}>
                   Cancel
                 </Button>
-                <Button type="submit" className="gradient-gold text-primary-foreground">
+                <Button type="submit" className="gradient-purple text-primary-foreground">
                   {editingPromoter ? "Update" : "Add Promoter"}
                 </Button>
               </div>
@@ -283,7 +283,7 @@ export default function Promoters() {
             </p>
             <Button
               onClick={() => setIsDialogOpen(true)}
-              className="gradient-gold text-primary-foreground"
+              className="gradient-purple text-primary-foreground"
             >
               <Plus className="w-4 h-4 mr-2" />
               Add Promoter
@@ -308,7 +308,7 @@ export default function Promoters() {
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-coral flex items-center justify-center text-primary-foreground font-bold text-lg">
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-violet flex items-center justify-center text-primary-foreground font-bold text-lg">
                         {promoter.name.charAt(0).toUpperCase()}
                       </div>
                       <div>

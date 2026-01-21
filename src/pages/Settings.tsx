@@ -104,8 +104,8 @@ export default function Settings() {
       <Card className="bg-card border-border">
         <CardHeader>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-coral/10 flex items-center justify-center">
-              <Shield className="w-5 h-5 text-coral" />
+            <div className="w-10 h-10 rounded-lg bg-violet/10 flex items-center justify-center">
+              <Shield className="w-5 h-5 text-violet" />
             </div>
             <div>
               <CardTitle className="text-lg text-foreground">Access Level</CardTitle>
