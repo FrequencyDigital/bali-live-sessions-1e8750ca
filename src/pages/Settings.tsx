@@ -1,14 +1,17 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Settings as SettingsIcon, User, Shield, Database } from "lucide-react";
+import { User, Shield, Database } from "lucide-react";
+import { ImageUpload } from "@/components/ImageUpload";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Settings() {
-  const { data: profile } = useQuery({
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { data: profile, refetch: refetchProfile } = useQuery({
     queryKey: ["profile"],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -18,9 +21,27 @@ export default function Settings() {
         .from("profiles")
         .select("*")
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle();
       if (error) throw error;
-      return data;
+      return { ...data, user_id: user.id };
+    },
+  });
+
+  const updateAvatarMutation = useMutation({
+    mutationFn: async (avatarUrl: string | null) => {
+      if (!profile?.user_id) throw new Error("No user");
+      const { error } = await supabase
+        .from("profiles")
+        .update({ avatar_url: avatarUrl })
+        .eq("user_id", profile.user_id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+      toast({ title: "Profile photo updated" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
 
@@ -78,7 +99,18 @@ export default function Settings() {
             </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6">
+          <div className="space-y-2">
+            <Label>Profile Photo</Label>
+            <ImageUpload
+              currentImageUrl={profile?.avatar_url}
+              onImageChange={(url) => updateAvatarMutation.mutate(url)}
+              folder="profiles"
+              identifier={profile?.user_id || "user"}
+              fallbackText={profile?.full_name || profile?.email || "U"}
+              size="lg"
+            />
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Full Name</Label>
