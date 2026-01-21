@@ -9,6 +9,7 @@ import { VenueOverview } from "@/components/venues/VenueOverview";
 import { VenueSeatingAreas } from "@/components/venues/VenueSeatingAreas";
 import { VenueMenus } from "@/components/venues/VenueMenus";
 import { VenueFiles } from "@/components/venues/VenueFiles";
+import { VenueManagers } from "@/components/venues/VenueManagers";
 
 export default function VenueDetail() {
   const { id } = useParams<{ id: string }>();
@@ -84,6 +85,7 @@ export default function VenueDetail() {
           <TabsTrigger value="seating">Seating Areas</TabsTrigger>
           <TabsTrigger value="menus">Menus</TabsTrigger>
           <TabsTrigger value="files">Files</TabsTrigger>
+          <TabsTrigger value="managers">Managers</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="mt-6">
@@ -100,6 +102,10 @@ export default function VenueDetail() {
 
         <TabsContent value="files" className="mt-6">
           <VenueFiles venueId={venue.id} />
+        </TabsContent>
+
+        <TabsContent value="managers" className="mt-6">
+          <VenueManagers venueId={venue.id} />
         </TabsContent>
       </Tabs>
     </div>
