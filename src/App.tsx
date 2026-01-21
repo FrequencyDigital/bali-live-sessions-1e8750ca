@@ -24,6 +24,7 @@ import PromoterEvents from "./pages/promoter/PromoterEvents";
 import PromoterEventDetail from "./pages/promoter/PromoterEventDetail";
 import PromoterQRCodes from "./pages/promoter/PromoterQRCodes";
 import PromoterPayouts from "./pages/promoter/PromoterPayouts";
+import Guestlist from "./pages/Guestlist";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +37,7 @@ const App = () => (
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/promoter/login" element={<PromoterLogin />} />
+          <Route path="/guestlist/:code" element={<Guestlist />} />
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           
           {/* Admin Routes */}

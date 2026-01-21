@@ -111,8 +111,9 @@ export default function PromoterEventDetail() {
     enabled: !!promoter?.id && !!eventId,
   });
 
+  // Short branded URL format: /guestlist/{qr_code_identifier}
   const registrationUrl = eventQr
-    ? `${window.location.origin}/register?promoter=${eventQr.qr_code_identifier}&event=${eventId}`
+    ? `${window.location.origin}/guestlist/${eventQr.qr_code_identifier}`
     : "";
 
   // Generate QR code image
