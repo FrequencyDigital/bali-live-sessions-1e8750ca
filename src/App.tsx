@@ -5,6 +5,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { PromoterProtectedRoute } from "@/components/promoter/PromoterProtectedRoute";
+import { PromoterLayout } from "@/components/promoter/PromoterLayout";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Events from "./pages/Events";
@@ -16,6 +18,12 @@ import Settings from "./pages/Settings";
 import Venues from "./pages/Venues";
 import VenueDetail from "./pages/VenueDetail";
 import NotFound from "./pages/NotFound";
+import PromoterLogin from "./pages/promoter/PromoterLogin";
+import PromoterDashboard from "./pages/promoter/PromoterDashboard";
+import PromoterEvents from "./pages/promoter/PromoterEvents";
+import PromoterEventDetail from "./pages/promoter/PromoterEventDetail";
+import PromoterQRCodes from "./pages/promoter/PromoterQRCodes";
+import PromoterPayouts from "./pages/promoter/PromoterPayouts";
 
 const queryClient = new QueryClient();
 
@@ -27,8 +35,10 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/promoter/login" element={<PromoterLogin />} />
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           
+          {/* Admin Routes */}
           <Route element={<ProtectedRoute />}>
             <Route element={<AppLayout />}>
               <Route path="/dashboard" element={<Dashboard />} />
@@ -40,6 +50,17 @@ const App = () => (
               <Route path="/qr-codes" element={<QRCodes />} />
               <Route path="/notifications" element={<Notifications />} />
               <Route path="/settings" element={<Settings />} />
+            </Route>
+          </Route>
+
+          {/* Promoter Portal Routes */}
+          <Route element={<PromoterProtectedRoute />}>
+            <Route element={<PromoterLayout />}>
+              <Route path="/promoter/dashboard" element={<PromoterDashboard />} />
+              <Route path="/promoter/events" element={<PromoterEvents />} />
+              <Route path="/promoter/events/:id" element={<PromoterEventDetail />} />
+              <Route path="/promoter/qr-codes" element={<PromoterQRCodes />} />
+              <Route path="/promoter/payouts" element={<PromoterPayouts />} />
             </Route>
           </Route>
 

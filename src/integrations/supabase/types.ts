@@ -41,6 +41,66 @@ export type Database = {
         }
         Relationships: []
       }
+      commission_ledger: {
+        Row: {
+          amount: number
+          approved_at: string | null
+          approved_by: string | null
+          commission_rate: number
+          created_at: string
+          event_id: string
+          id: string
+          paid_at: string | null
+          promoter_id: string
+          registrations_count: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          commission_rate?: number
+          created_at?: string
+          event_id: string
+          id?: string
+          paid_at?: string | null
+          promoter_id: string
+          registrations_count?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          commission_rate?: number
+          created_at?: string
+          event_id?: string
+          id?: string
+          paid_at?: string | null
+          promoter_id?: string
+          registrations_count?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_ledger_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_ledger_promoter_id_fkey"
+            columns: ["promoter_id"]
+            isOneToOne: false
+            referencedRelation: "promoters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_table_allocations: {
         Row: {
           created_at: string
@@ -322,6 +382,54 @@ export type Database = {
         }
         Relationships: []
       }
+      promoter_event_qr: {
+        Row: {
+          created_at: string
+          event_id: string
+          id: string
+          promoter_id: string
+          qr_code_identifier: string
+          registrations_count: number
+          scans_count: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          id?: string
+          promoter_id: string
+          qr_code_identifier: string
+          registrations_count?: number
+          scans_count?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          id?: string
+          promoter_id?: string
+          qr_code_identifier?: string
+          registrations_count?: number
+          scans_count?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promoter_event_qr_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promoter_event_qr_promoter_id_fkey"
+            columns: ["promoter_id"]
+            isOneToOne: false
+            referencedRelation: "promoters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       promoters: {
         Row: {
           commission_percentage: number
@@ -331,9 +439,11 @@ export type Database = {
           is_active: boolean
           logo_url: string | null
           name: string
+          payout_details: Json | null
           phone: string | null
           qr_code_identifier: string
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           commission_percentage?: number
@@ -343,9 +453,11 @@ export type Database = {
           is_active?: boolean
           logo_url?: string | null
           name: string
+          payout_details?: Json | null
           phone?: string | null
           qr_code_identifier: string
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           commission_percentage?: number
@@ -355,9 +467,11 @@ export type Database = {
           is_active?: boolean
           logo_url?: string | null
           name?: string
+          payout_details?: Json | null
           phone?: string | null
           qr_code_identifier?: string
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -576,6 +690,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_promoter_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -584,9 +699,10 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_promoter: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
-      app_role: "super_admin" | "admin"
+      app_role: "super_admin" | "admin" | "promoter"
       event_status: "upcoming" | "live" | "past"
       menu_category: "food" | "drink"
       table_allocation_status: "available" | "reserved" | "held" | "confirmed"
@@ -719,7 +835,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["super_admin", "admin"],
+      app_role: ["super_admin", "admin", "promoter"],
       event_status: ["upcoming", "live", "past"],
       menu_category: ["food", "drink"],
       table_allocation_status: ["available", "reserved", "held", "confirmed"],
