@@ -14,6 +14,94 @@ export type Database = {
   }
   public: {
     Tables: {
+      attribution_settings: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          setting_key: string
+          setting_value: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          setting_key: string
+          setting_value?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          setting_key?: string
+          setting_value?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      event_table_allocations: {
+        Row: {
+          created_at: string
+          event_id: string
+          guest_name: string | null
+          id: string
+          notes: string | null
+          seating_area_id: string
+          status: Database["public"]["Enums"]["table_allocation_status"]
+          table_config_id: string | null
+          table_number: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          guest_name?: string | null
+          id?: string
+          notes?: string | null
+          seating_area_id: string
+          status?: Database["public"]["Enums"]["table_allocation_status"]
+          table_config_id?: string | null
+          table_number?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          guest_name?: string | null
+          id?: string
+          notes?: string | null
+          seating_area_id?: string
+          status?: Database["public"]["Enums"]["table_allocation_status"]
+          table_config_id?: string | null
+          table_number?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_table_allocations_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_table_allocations_seating_area_id_fkey"
+            columns: ["seating_area_id"]
+            isOneToOne: false
+            referencedRelation: "seating_areas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_table_allocations_table_config_id_fkey"
+            columns: ["table_config_id"]
+            isOneToOne: false
+            referencedRelation: "table_configurations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       events: {
         Row: {
           capacity: number
@@ -28,6 +116,7 @@ export type Database = {
           time: string
           updated_at: string
           venue: string
+          venue_id: string | null
         }
         Insert: {
           capacity?: number
@@ -42,6 +131,7 @@ export type Database = {
           time: string
           updated_at?: string
           venue: string
+          venue_id?: string | null
         }
         Update: {
           capacity?: number
@@ -56,8 +146,17 @@ export type Database = {
           time?: string
           updated_at?: string
           venue?: string
+          venue_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "events_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       guests: {
         Row: {
@@ -112,6 +211,53 @@ export type Database = {
             columns: ["promoter_id"]
             isOneToOne: false
             referencedRelation: "promoters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      menu_items: {
+        Row: {
+          category: Database["public"]["Enums"]["menu_category"]
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          price_idr: number
+          subcategory: string | null
+          updated_at: string
+          venue_id: string
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["menu_category"]
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          price_idr: number
+          subcategory?: string | null
+          updated_at?: string
+          venue_id: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["menu_category"]
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          price_idr?: number
+          subcategory?: string | null
+          updated_at?: string
+          venue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_items_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
             referencedColumns: ["id"]
           },
         ]
@@ -251,6 +397,82 @@ export type Database = {
           },
         ]
       }
+      seating_areas: {
+        Row: {
+          capacity: number
+          created_at: string
+          id: string
+          name: string
+          notes: string | null
+          updated_at: string
+          venue_id: string
+        }
+        Insert: {
+          capacity?: number
+          created_at?: string
+          id?: string
+          name: string
+          notes?: string | null
+          updated_at?: string
+          venue_id: string
+        }
+        Update: {
+          capacity?: number
+          created_at?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          updated_at?: string
+          venue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seating_areas_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      table_configurations: {
+        Row: {
+          count: number
+          created_at: string
+          id: string
+          min_spend: number | null
+          notes: string | null
+          seating_area_id: string
+          table_type: Database["public"]["Enums"]["table_type"]
+        }
+        Insert: {
+          count?: number
+          created_at?: string
+          id?: string
+          min_spend?: number | null
+          notes?: string | null
+          seating_area_id: string
+          table_type: Database["public"]["Enums"]["table_type"]
+        }
+        Update: {
+          count?: number
+          created_at?: string
+          id?: string
+          min_spend?: number | null
+          notes?: string | null
+          seating_area_id?: string
+          table_type?: Database["public"]["Enums"]["table_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "table_configurations_seating_area_id_fkey"
+            columns: ["seating_area_id"]
+            isOneToOne: false
+            referencedRelation: "seating_areas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -272,6 +494,83 @@ export type Database = {
         }
         Relationships: []
       }
+      venue_files: {
+        Row: {
+          file_name: string | null
+          file_type: Database["public"]["Enums"]["venue_file_type"]
+          file_url: string
+          id: string
+          uploaded_at: string
+          venue_id: string
+        }
+        Insert: {
+          file_name?: string | null
+          file_type: Database["public"]["Enums"]["venue_file_type"]
+          file_url: string
+          id?: string
+          uploaded_at?: string
+          venue_id: string
+        }
+        Update: {
+          file_name?: string | null
+          file_type?: Database["public"]["Enums"]["venue_file_type"]
+          file_url?: string
+          id?: string
+          uploaded_at?: string
+          venue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "venue_files_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      venues: {
+        Row: {
+          address: string | null
+          contact_person: string | null
+          contact_whatsapp: string | null
+          created_at: string
+          google_maps_link: string | null
+          id: string
+          is_archived: boolean
+          name: string
+          notes: string | null
+          total_capacity: number
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          contact_person?: string | null
+          contact_whatsapp?: string | null
+          created_at?: string
+          google_maps_link?: string | null
+          id?: string
+          is_archived?: boolean
+          name: string
+          notes?: string | null
+          total_capacity?: number
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          contact_person?: string | null
+          contact_whatsapp?: string | null
+          created_at?: string
+          google_maps_link?: string | null
+          id?: string
+          is_archived?: boolean
+          name?: string
+          notes?: string | null
+          total_capacity?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -289,6 +588,10 @@ export type Database = {
     Enums: {
       app_role: "super_admin" | "admin"
       event_status: "upcoming" | "live" | "past"
+      menu_category: "food" | "drink"
+      table_allocation_status: "available" | "reserved" | "held" | "confirmed"
+      table_type: "booth" | "high_table" | "standard" | "standing"
+      venue_file_type: "drinks_menu" | "food_menu" | "other"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -418,6 +721,10 @@ export const Constants = {
     Enums: {
       app_role: ["super_admin", "admin"],
       event_status: ["upcoming", "live", "past"],
+      menu_category: ["food", "drink"],
+      table_allocation_status: ["available", "reserved", "held", "confirmed"],
+      table_type: ["booth", "high_table", "standard", "standing"],
+      venue_file_type: ["drinks_menu", "food_menu", "other"],
     },
   },
 } as const
