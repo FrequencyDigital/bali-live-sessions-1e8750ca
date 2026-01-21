@@ -184,8 +184,8 @@ export default function Guests() {
                     <TableHead className="text-muted-foreground">Contact</TableHead>
                     <TableHead className="text-muted-foreground">Nationality</TableHead>
                     <TableHead className="text-muted-foreground">Event</TableHead>
-                    <TableHead className="text-muted-foreground">Promoter</TableHead>
-                    <TableHead className="text-muted-foreground">Attended</TableHead>
+                    <TableHead className="text-muted-foreground">Source</TableHead>
+                    <TableHead className="text-muted-foreground">Status</TableHead>
                     <TableHead className="text-muted-foreground">Registered</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -224,8 +224,16 @@ export default function Guests() {
                           <span className="text-muted-foreground">-</span>
                         )}
                       </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {(guest.promoters as any)?.name || "-"}
+                      <TableCell>
+                        {(guest.promoters as any)?.name ? (
+                          <Badge variant="outline" className="border-violet-500/50 text-violet-400">
+                            {(guest.promoters as any).name}
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="border-primary/50 text-primary">
+                            Direct – BLS
+                          </Badge>
+                        )}
                       </TableCell>
                       <TableCell>
                         <Button
@@ -237,16 +245,16 @@ export default function Guests() {
                               attended: !guest.attended,
                             })
                           }
-                          className={
-                            guest.attended
-                              ? "text-success hover:text-success"
-                              : "text-muted-foreground hover:text-foreground"
-                          }
                         >
                           {guest.attended ? (
-                            <Check className="w-4 h-4" />
+                            <Badge className="bg-green-500/20 text-green-400 border-green-500/30 hover:bg-green-500/30">
+                              <Check className="w-3 h-3 mr-1" />
+                              Checked In
+                            </Badge>
                           ) : (
-                            <X className="w-4 h-4" />
+                            <Badge variant="outline" className="border-muted-foreground/30 text-muted-foreground hover:border-foreground hover:text-foreground">
+                              Registered
+                            </Badge>
                           )}
                         </Button>
                       </TableCell>
