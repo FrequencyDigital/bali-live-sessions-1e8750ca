@@ -6,7 +6,8 @@ import {
   QrCode, 
   Bell, 
   Settings,
-  LogOut
+  LogOut,
+  Building2
 } from "lucide-react";
 import blsLogo from "@/assets/bls-logo.png";
 import { NavLink, useLocation } from "react-router-dom";
@@ -33,6 +34,7 @@ import { useQuery } from "@tanstack/react-query";
 const mainNavItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Events", url: "/events", icon: Calendar },
+  { title: "Venues", url: "/venues", icon: Building2 },
   { title: "Guest List", url: "/guests", icon: Users },
   { title: "Promoters", url: "/promoters", icon: UserCheck },
   { title: "QR Codes", url: "/qr-codes", icon: QrCode },

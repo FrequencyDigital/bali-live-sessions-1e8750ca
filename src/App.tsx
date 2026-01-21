@@ -13,6 +13,8 @@ import Promoters from "./pages/Promoters";
 import QRCodes from "./pages/QRCodes";
 import Notifications from "./pages/Notifications";
 import Settings from "./pages/Settings";
+import Venues from "./pages/Venues";
+import VenueDetail from "./pages/VenueDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -33,6 +35,8 @@ const App = () => (
               <Route path="/events" element={<Events />} />
               <Route path="/guests" element={<Guests />} />
               <Route path="/promoters" element={<Promoters />} />
+              <Route path="/venues" element={<Venues />} />
+              <Route path="/venues/:id" element={<VenueDetail />} />
               <Route path="/qr-codes" element={<QRCodes />} />
               <Route path="/notifications" element={<Notifications />} />
               <Route path="/settings" element={<Settings />} />
