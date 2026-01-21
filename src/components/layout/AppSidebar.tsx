@@ -7,7 +7,8 @@ import {
   Bell, 
   Settings,
   LogOut,
-  Building2
+  Building2,
+  Wallet
 } from "lucide-react";
 import blsLogo from "@/assets/bls-logo.png";
 import { NavLink, useLocation } from "react-router-dom";
@@ -37,6 +38,7 @@ const mainNavItems = [
   { title: "Venues", url: "/venues", icon: Building2 },
   { title: "Guest List", url: "/guests", icon: Users },
   { title: "Promoters", url: "/promoters", icon: UserCheck },
+  { title: "Commissions", url: "/commissions", icon: Wallet },
   { title: "QR Codes", url: "/qr-codes", icon: QrCode },
   { title: "Notifications", url: "/notifications", icon: Bell },
 ];

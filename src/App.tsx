@@ -12,6 +12,7 @@ import Dashboard from "./pages/Dashboard";
 import Events from "./pages/Events";
 import Guests from "./pages/Guests";
 import Promoters from "./pages/Promoters";
+import CommissionLedger from "./pages/CommissionLedger";
 import QRCodes from "./pages/QRCodes";
 import Notifications from "./pages/Notifications";
 import Settings from "./pages/Settings";
@@ -48,6 +49,7 @@ const App = () => (
               <Route path="/events" element={<Events />} />
               <Route path="/guests" element={<Guests />} />
               <Route path="/promoters" element={<Promoters />} />
+              <Route path="/commissions" element={<CommissionLedger />} />
               <Route path="/venues" element={<Venues />} />
               <Route path="/venues/:id" element={<VenueDetail />} />
               <Route path="/qr-codes" element={<QRCodes />} />
