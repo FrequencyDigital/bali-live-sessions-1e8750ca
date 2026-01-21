@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
-import { Loader2, Mail, ArrowLeft } from "lucide-react";
+import { Loader2, Mail, ArrowLeft, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import blsLogo from "@/assets/bls-logo.png";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
@@ -19,6 +19,16 @@ export default function PromoterLogin() {
   const [step, setStep] = useState<AuthStep>("email");
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // If a magic-link redirect signs the user in, send them forward.
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" && session?.user) {
+        navigate("/promoter/dashboard", { replace: true });
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [navigate]);
 
   const handleSendOTP = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,8 +46,8 @@ export default function PromoterLogin() {
 
       setStep("otp");
       toast({
-        title: "Code sent!",
-        description: "Check your email for the verification code.",
+        title: "Login email sent",
+        description: "Check your inbox (and spam) for a login link or 6-digit code.",
       });
     } catch (error: any) {
       toast({
@@ -58,7 +68,9 @@ export default function PromoterLogin() {
       const { data, error } = await supabase.auth.verifyOtp({
         email,
         token: otp,
-        type: "email",
+        // For email codes, the correct type is "magiclink" in GoTrue.
+        // If your backend sends a 6-digit code, this still verifies the session.
+        type: "magiclink",
       });
 
       if (error) throw error;
@@ -102,14 +114,6 @@ export default function PromoterLogin() {
           .from("promoters")
           .update({ user_id: data.user.id })
           .eq("id", promoter.id);
-      }
-
-      // Add promoter role if not exists
-      if (data.user) {
-        await supabase.from("user_roles").upsert(
-          { user_id: data.user.id, role: "promoter" as any },
-          { onConflict: "user_id,role" }
-        );
       }
 
       toast({
@@ -201,9 +205,12 @@ export default function PromoterLogin() {
 
               <div className="text-center space-y-2">
                 <p className="text-sm text-muted-foreground">
-                  Enter the 6-digit code sent to
+                  If your email contains a 6-digit code, enter it below. If it contains a login link, click the link to sign in.
                 </p>
                 <p className="font-medium text-foreground">{email}</p>
+                <p className="text-xs text-muted-foreground">
+                  Not seeing anything? Check Promotions/Spam, then resend.
+                </p>
               </div>
 
               <div className="flex justify-center">
@@ -242,8 +249,16 @@ export default function PromoterLogin() {
                 className="w-full text-sm text-muted-foreground hover:text-primary transition-colors"
                 disabled={isLoading}
               >
-                Resend code
+                Resend login email
               </button>
+
+              <a
+                href="/login"
+                className="w-full inline-flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
+              >
+                Admin Login
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
             </div>
           )}
         </CardContent>
