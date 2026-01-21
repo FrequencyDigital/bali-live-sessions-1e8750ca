@@ -178,7 +178,7 @@ export type Database = {
       }
       promoters: {
         Row: {
-          commission_per_attendee: number
+          commission_percentage: number
           created_at: string
           email: string | null
           id: string
@@ -190,7 +190,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          commission_per_attendee?: number
+          commission_percentage?: number
           created_at?: string
           email?: string | null
           id?: string
@@ -202,7 +202,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          commission_per_attendee?: number
+          commission_percentage?: number
           created_at?: string
           email?: string | null
           id?: string
