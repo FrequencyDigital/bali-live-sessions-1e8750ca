@@ -14,8 +14,10 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Plus, UserCheck, Edit, Trash2, QrCode, DollarSign } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { ImageUpload } from "@/components/ImageUpload";
 import type { Database } from "@/integrations/supabase/types";
 
 type Promoter = Database["public"]["Tables"]["promoters"]["Row"];
@@ -30,6 +32,7 @@ export default function Promoters() {
     phone: "",
     commission_percentage: 5,
     is_active: true,
+    logo_url: null,
   });
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -137,6 +140,7 @@ export default function Promoters() {
       phone: "",
       commission_percentage: 5,
       is_active: true,
+      logo_url: null,
     });
     setEditingPromoter(null);
     setIsDialogOpen(false);
@@ -162,6 +166,7 @@ export default function Promoters() {
       phone: promoter.phone || "",
       commission_percentage: Number(promoter.commission_percentage),
       is_active: promoter.is_active,
+      logo_url: promoter.logo_url,
     });
     setIsDialogOpen(true);
   };
@@ -189,6 +194,17 @@ export default function Promoters() {
               </DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <Label>Profile Photo</Label>
+                <ImageUpload
+                  currentImageUrl={formData.logo_url}
+                  onImageChange={(url) => setFormData({ ...formData, logo_url: url })}
+                  folder="promoters"
+                  identifier={editingPromoter?.id || `new-${Date.now()}`}
+                  fallbackText={formData.name || "P"}
+                  size="md"
+                />
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="name">Name</Label>
                 <Input
@@ -311,9 +327,12 @@ export default function Promoters() {
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-violet flex items-center justify-center text-primary-foreground font-bold text-lg">
-                        {promoter.name.charAt(0).toUpperCase()}
-                      </div>
+                      <Avatar className="w-12 h-12 border-2 border-border">
+                        <AvatarImage src={promoter.logo_url || undefined} alt={promoter.name} />
+                        <AvatarFallback className="bg-gradient-to-br from-primary to-violet text-primary-foreground font-bold text-lg">
+                          {promoter.name.charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
                       <div>
                         <CardTitle className="text-lg text-foreground">
                           {promoter.name}

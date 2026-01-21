@@ -23,10 +23,12 @@ import {
   SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { useQuery } from "@tanstack/react-query";
 
 const mainNavItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
@@ -46,6 +48,22 @@ export function AppSidebar() {
   const navigate = useNavigate();
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
+
+  const { data: profile } = useQuery({
+    queryKey: ["profile"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+      
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (error) return null;
+      return data;
+    },
+  });
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -137,6 +155,27 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="p-3 border-t border-sidebar-border">
+        <div className={cn(
+          "flex items-center gap-3 mb-2",
+          isCollapsed && "justify-center"
+        )}>
+          <Avatar className="w-9 h-9 border border-border">
+            <AvatarImage src={profile?.avatar_url || undefined} alt="Profile" />
+            <AvatarFallback className="bg-primary/10 text-primary text-sm font-medium">
+              {profile?.full_name?.charAt(0)?.toUpperCase() || profile?.email?.charAt(0)?.toUpperCase() || "U"}
+            </AvatarFallback>
+          </Avatar>
+          {!isCollapsed && (
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-foreground truncate">
+                {profile?.full_name || "Admin"}
+              </p>
+              <p className="text-xs text-muted-foreground truncate">
+                {profile?.email}
+              </p>
+            </div>
+          )}
+        </div>
         <Button
           variant="ghost"
           onClick={handleLogout}
