@@ -643,6 +643,35 @@ export type Database = {
           },
         ]
       }
+      venue_managers: {
+        Row: {
+          created_at: string
+          id: string
+          user_id: string
+          venue_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          user_id: string
+          venue_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          user_id?: string
+          venue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "venue_managers_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       venues: {
         Row: {
           address: string | null
@@ -690,6 +719,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_managed_venue_ids: { Args: { _user_id: string }; Returns: string[] }
       get_promoter_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
@@ -700,9 +730,10 @@ export type Database = {
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_promoter: { Args: { _user_id: string }; Returns: boolean }
+      is_venue_manager: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
-      app_role: "super_admin" | "admin" | "promoter"
+      app_role: "super_admin" | "admin" | "promoter" | "venue_manager"
       event_status: "upcoming" | "live" | "past"
       menu_category: "food" | "drink"
       table_allocation_status: "available" | "reserved" | "held" | "confirmed"
@@ -835,7 +866,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["super_admin", "admin", "promoter"],
+      app_role: ["super_admin", "admin", "promoter", "venue_manager"],
       event_status: ["upcoming", "live", "past"],
       menu_category: ["food", "drink"],
       table_allocation_status: ["available", "reserved", "held", "confirmed"],
