@@ -28,7 +28,7 @@ export default function Promoters() {
     name: "",
     email: "",
     phone: "",
-    commission_per_attendee: 0,
+    commission_percentage: 10,
     is_active: true,
   });
   const { toast } = useToast();
@@ -135,7 +135,7 @@ export default function Promoters() {
       name: "",
       email: "",
       phone: "",
-      commission_per_attendee: 0,
+      commission_percentage: 10,
       is_active: true,
     });
     setEditingPromoter(null);
@@ -160,7 +160,7 @@ export default function Promoters() {
       name: promoter.name,
       email: promoter.email || "",
       phone: promoter.phone || "",
-      commission_per_attendee: Number(promoter.commission_per_attendee),
+      commission_percentage: Number(promoter.commission_percentage),
       is_active: promoter.is_active,
     });
     setIsDialogOpen(true);
@@ -222,20 +222,24 @@ export default function Promoters() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="commission">Commission per Attendee ($)</Label>
+                <Label htmlFor="commission">Commission (%)</Label>
                 <Input
                   id="commission"
                   type="number"
-                  step="0.01"
-                  value={formData.commission_per_attendee}
+                  step="0.5"
+                  min="0"
+                  max="100"
+                  value={formData.commission_percentage}
                   onChange={(e) =>
                     setFormData({
                       ...formData,
-                      commission_per_attendee: parseFloat(e.target.value) || 0,
+                      commission_percentage: parseFloat(e.target.value) || 0,
                     })
                   }
                   className="bg-input border-border"
+                  placeholder="e.g., 10"
                 />
+                <p className="text-xs text-muted-foreground">Percentage of total sales</p>
               </div>
               <div className="flex items-center justify-between">
                 <Label htmlFor="active">Active Status</Label>
@@ -298,7 +302,6 @@ export default function Promoters() {
               attended: 0,
               scans: 0,
             };
-            const commission = stats.attended * Number(promoter.commission_per_attendee);
 
             return (
               <Card
@@ -375,9 +378,9 @@ export default function Promoters() {
                   <div className="flex items-center justify-between p-3 rounded-lg bg-primary/10">
                     <div className="flex items-center gap-2">
                       <DollarSign className="w-4 h-4 text-primary" />
-                      <span className="text-sm text-muted-foreground">Commission</span>
+                      <span className="text-sm text-muted-foreground">Commission Rate</span>
                     </div>
-                    <span className="font-bold text-primary">${commission.toFixed(2)}</span>
+                    <span className="font-bold text-primary">{promoter.commission_percentage}%</span>
                   </div>
                 </CardContent>
               </Card>

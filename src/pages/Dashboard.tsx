@@ -234,7 +234,7 @@ export default function Dashboard() {
                       {promoter.name}
                     </h3>
                     <p className="text-xs text-muted-foreground">
-                      ${promoter.commission_per_attendee} per guest
+                      {promoter.commission_percentage}% commission
                     </p>
                   </div>
                   <div className="flex items-center gap-1 text-success">
