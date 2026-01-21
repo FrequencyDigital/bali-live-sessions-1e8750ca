@@ -179,7 +179,7 @@ export default function Events() {
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="gradient-gold text-primary-foreground hover:opacity-90">
+            <Button className="gradient-purple text-primary-foreground hover:opacity-90">
               <Plus className="w-4 h-4 mr-2" />
               Create Event
             </Button>
@@ -281,7 +281,7 @@ export default function Events() {
                 <Button type="button" variant="outline" onClick={resetForm}>
                   Cancel
                 </Button>
-                <Button type="submit" className="gradient-gold text-primary-foreground">
+                <Button type="submit" className="gradient-purple text-primary-foreground">
                   {editingEvent ? "Update Event" : "Create Event"}
                 </Button>
               </div>
@@ -314,7 +314,7 @@ export default function Events() {
             </p>
             <Button
               onClick={() => setIsDialogOpen(true)}
-              className="gradient-gold text-primary-foreground"
+              className="gradient-purple text-primary-foreground"
             >
               <Plus className="w-4 h-4 mr-2" />
               Create Event

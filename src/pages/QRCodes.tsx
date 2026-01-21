@@ -105,8 +105,8 @@ export default function QRCodes() {
         <Card className="bg-card border-border">
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-coral/10 flex items-center justify-center">
-                <ExternalLink className="w-6 h-6 text-coral" />
+              <div className="w-12 h-12 rounded-xl bg-violet/10 flex items-center justify-center">
+                <ExternalLink className="w-6 h-6 text-violet" />
               </div>
               <div>
                 <p className="text-2xl font-bold text-foreground">
@@ -150,7 +150,7 @@ export default function QRCodes() {
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-coral flex items-center justify-center text-primary-foreground font-bold">
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-violet flex items-center justify-center text-primary-foreground font-bold">
                       {promoter.name.charAt(0).toUpperCase()}
                     </div>
                     <div>
@@ -167,7 +167,7 @@ export default function QRCodes() {
               <CardContent className="space-y-4">
                 {/* QR Code Display */}
                 <div className="aspect-square bg-gradient-to-br from-muted to-secondary rounded-xl flex items-center justify-center relative overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-coral/5" />
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-violet/5" />
                   <div className="relative z-10 text-center p-4">
                     <QrCode className="w-24 h-24 text-primary mx-auto mb-3" />
                     <p className="text-xs font-mono text-muted-foreground">
