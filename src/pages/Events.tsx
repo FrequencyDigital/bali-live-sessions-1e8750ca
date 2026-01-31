@@ -1,18 +1,26 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useParams, useSearchParams } from "react-router-dom";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+  Loader2,
+  Calendar,
+  Clock,
+  MapPin,
+  CheckCircle2,
+  Sparkles,
+  PartyPopper,
+  CalendarPlus,
+  Share2,
+  Heart,
+} from "lucide-react";
+import { format } from "date-fns";
+import blsLogo from "@/assets/bls-logo.png";
 import {
   Select,
   SelectContent,
@@ -20,395 +28,597 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Plus, Calendar, Clock, MapPin, Users, Edit, Trash2 } from "lucide-react";
-import { format } from "date-fns";
-import { useToast } from "@/hooks/use-toast";
-import type { Database } from "@/integrations/supabase/types";
 
-type Event = Database["public"]["Tables"]["events"]["Row"];
-type EventInsert = Database["public"]["Tables"]["events"]["Insert"];
-type EventStatus = Database["public"]["Enums"]["event_status"];
+// Common nationalities for Bali
+const NATIONALITIES = [
+  "Indonesian",
+  "Australian",
+  "British",
+  "American",
+  "Dutch",
+  "German",
+  "French",
+  "Russian",
+  "Chinese",
+  "Japanese",
+  "Korean",
+  "Indian",
+  "Singaporean",
+  "Malaysian",
+  "Canadian",
+  "New Zealander",
+  "Brazilian",
+  "Italian",
+  "Spanish",
+  "Other",
+];
 
-export default function Events() {
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingEvent, setEditingEvent] = useState<Event | null>(null);
-  const [formData, setFormData] = useState<Partial<EventInsert>>({
-    name: "",
-    date: "",
-    time: "",
-    venue: "",
-    capacity: 100,
-    description: "",
-    image_url: "", // ADDED: image_url field
-    status: "upcoming",
-  });
+// Simple device fingerprint (basic browser info)
+const getDeviceFingerprint = () => {
+  const nav = window.navigator;
+  const screen = window.screen;
+  return btoa(
+    [
+      nav.userAgent,
+      nav.language,
+      screen.width,
+      screen.height,
+      screen.colorDepth,
+      new Date().getTimezoneOffset(),
+    ].join("|")
+  ).slice(0, 64);
+};
+
+type RegistrationState = "form" | "already-registered" | "success";
+
+export default function Guestlist() {
+  const { code } = useParams<{ code: string }>();
+  const [searchParams] = useSearchParams();
+  const eventIdParam = searchParams.get("event");
   const { toast } = useToast();
-  const queryClient = useQueryClient();
+  
+  const [registrationState, setRegistrationState] = useState<RegistrationState>("form");
+  const [existingRegistration, setExistingRegistration] = useState<any>(null);
 
-  const { data: events, isLoading } = useQuery({
-    queryKey: ["events"],
+  // Form state
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
+  const [dateOfBirth, setDateOfBirth] = useState("");
+  const [nationality, setNationality] = useState("");
+
+  // Determine if this is a promoter link or generic BLS link
+  const isPromoterLink = !!code;
+  const isGenericLink = !code && !!eventIdParam;
+
+  // Fetch promoter event QR data (for promoter links)
+  const { data: qrData, isLoading: qrLoading } = useQuery({
+    queryKey: ["guestlist-qr", code],
     queryFn: async () => {
+      if (!code) return null;
+
       const { data, error } = await supabase
-        .from("events")
-        .select("*")
-        .order("date", { ascending: true });
+        .from("promoter_event_qr")
+        .select(`
+          id,
+          promoter_id,
+          event_id,
+          qr_code_identifier,
+          scans_count,
+          registrations_count,
+          promoters (
+            id,
+            name,
+            logo_url
+          ),
+          events (
+            id,
+            name,
+            date,
+            time,
+            description,
+            image_url,
+            status,
+            venues (
+              id,
+              name,
+              address
+            )
+          )
+        `)
+        .eq("qr_code_identifier", code)
+        .maybeSingle();
+
       if (error) throw error;
       return data;
     },
+    enabled: isPromoterLink,
   });
 
-  const { data: guestCounts } = useQuery({
-    queryKey: ["guest-counts"],
+  // Fetch event data directly (for generic BLS links)
+  const { data: directEvent, isLoading: eventLoading } = useQuery({
+    queryKey: ["guestlist-event", eventIdParam],
     queryFn: async () => {
+      if (!eventIdParam) return null;
+
       const { data, error } = await supabase
-        .from("guests")
-        .select("event_id");
+        .from("events")
+        .select(`
+          *,
+          venues (
+            id,
+            name,
+            address
+          )
+        `)
+        .eq("id", eventIdParam)
+        .eq("status", "upcoming")
+        .maybeSingle();
+
       if (error) throw error;
-      const counts: Record<string, number> = {};
-      data.forEach((g) => {
-        if (g.event_id) {
-          counts[g.event_id] = (counts[g.event_id] || 0) + 1;
-        }
-      });
-      return counts;
+      return data;
     },
+    enabled: isGenericLink,
   });
 
-  const createMutation = useMutation({
-    mutationFn: async (data: EventInsert) => {
-      const { error } = await supabase.from("events").insert(data);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["events"] });
-      toast({ title: "Event created successfully" });
-      resetForm();
-    },
-    onError: (error: any) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    },
-  });
+  // Derived event data
+  const event = isPromoterLink ? (qrData?.events as any) : directEvent;
+  const promoter = isPromoterLink ? (qrData?.promoters as any) : null;
+  const eventId = event?.id;
+  const promoterId = isPromoterLink ? qrData?.promoter_id : null;
+  
+  // Get venue name safely
+  const venueName = (event?.venues as any)?.name || "Venue TBA";
 
-  const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<Event> }) => {
-      const { error } = await supabase.from("events").update(data).eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["events"] });
-      toast({ title: "Event updated successfully" });
-      resetForm();
-    },
-    onError: (error: any) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    },
-  });
+  // Track QR scan (only for promoter links)
+  useEffect(() => {
+    if (qrData?.promoter_id && qrData?.event_id) {
+      // Record the scan (fire and forget)
+      supabase
+        .from("qr_scans")
+        .insert({
+          promoter_id: qrData.promoter_id,
+          event_id: qrData.event_id,
+        })
+        .then(() => {
+          // Update scan count
+          supabase
+            .from("promoter_event_qr")
+            .update({ scans_count: (qrData.scans_count || 0) + 1 })
+            .eq("id", qrData.id);
+        });
+    }
+  }, [qrData]);
 
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("events").delete().eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["events"] });
-      toast({ title: "Event deleted successfully" });
-    },
-    onError: (error: any) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    },
-  });
+  // Check for duplicate registration
+  const checkDuplicate = async (emailVal: string, whatsappVal: string) => {
+    if (!eventId) return null;
 
-  const resetForm = () => {
-    setFormData({
-      name: "",
-      date: "",
-      time: "",
-      venue: "",
-      capacity: 100,
-      description: "",
-      image_url: "", // ADDED: Reset image_url
-      status: "upcoming",
+    const normalizedEmail = emailVal.trim().toLowerCase();
+    const normalizedWhatsapp = whatsappVal.trim().replace(/\D/g, "");
+
+    // Check by email
+    const { data: byEmail } = await supabase
+      .from("guests")
+      .select("id, full_name, promoter_id, promoters(name)")
+      .eq("event_id", eventId)
+      .ilike("email", normalizedEmail)
+      .maybeSingle();
+
+    if (byEmail) return byEmail;
+
+    // Check by WhatsApp (normalize to digits only for comparison)
+    const { data: allGuests } = await supabase
+      .from("guests")
+      .select("id, full_name, whatsapp_number, promoter_id, promoters(name)")
+      .eq("event_id", eventId);
+
+    const byWhatsapp = allGuests?.find((g) => {
+      const guestWa = g.whatsapp_number?.replace(/\D/g, "") || "";
+      return guestWa === normalizedWhatsapp || 
+             guestWa.endsWith(normalizedWhatsapp) || 
+             normalizedWhatsapp.endsWith(guestWa);
     });
-    setEditingEvent(null);
-    setIsDialogOpen(false);
+
+    return byWhatsapp || null;
   };
+
+  // Submit registration
+  const registerMutation = useMutation({
+    mutationFn: async () => {
+      if (!eventId) throw new Error("Invalid guestlist link");
+
+      // Anti-duplicate check
+      const duplicate = await checkDuplicate(email, whatsapp);
+      if (duplicate) {
+        setExistingRegistration(duplicate);
+        setRegistrationState("already-registered");
+        return { duplicate: true };
+      }
+
+      const deviceFingerprint = getDeviceFingerprint();
+
+      const { error } = await supabase.from("guests").insert({
+        full_name: fullName.trim(),
+        email: email.trim().toLowerCase(),
+        whatsapp_number: whatsapp.trim(),
+        date_of_birth: dateOfBirth || null,
+        nationality: nationality || null,
+        event_id: eventId,
+        promoter_id: promoterId, // null for generic links, promoter ID for promoter links
+      });
+
+      if (error) {
+        if (error.code === "23505") {
+          throw new Error("You're already registered for this event!");
+        }
+        throw error;
+      }
+
+      // Update registration count (only for promoter links)
+      if (qrData) {
+        await supabase
+          .from("promoter_event_qr")
+          .update({ registrations_count: (qrData.registrations_count || 0) + 1 })
+          .eq("id", qrData.id);
+      }
+
+      return { duplicate: false };
+    },
+    onSuccess: (result) => {
+      if (!result?.duplicate) {
+        setRegistrationState("success");
+        toast({
+          title: "You're on the list! 🎉",
+          description: "See you at the event!",
+        });
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Registration Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingEvent) {
-      updateMutation.mutate({ id: editingEvent.id, data: formData });
+    registerMutation.mutate();
+  };
+
+  // Calendar event generation
+  const addToCalendar = () => {
+    if (!event) return;
+    
+    const startDate = new Date(`${event.date}T${event.time}`);
+    const endDate = new Date(startDate.getTime() + 4 * 60 * 60 * 1000); // +4 hours
+    
+    const formatDate = (d: Date) => d.toISOString().replace(/-|:|\.\d{3}/g, "");
+    
+    const calUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(event.name)}&dates=${formatDate(startDate)}/${formatDate(endDate)}&location=${encodeURIComponent(venueName)}&details=${encodeURIComponent(`You're on the guestlist for ${event.name}!`)}`;
+    
+    window.open(calUrl, "_blank");
+  };
+
+  // Share generic link (no promoter hijack)
+  const shareEvent = async () => {
+    if (!event) return;
+    
+    const shareUrl = `${window.location.origin}/guestlist?event=${event.id}`;
+    const shareText = `Join me at ${event.name}! 🎶\n${format(new Date(event.date), "EEEE, MMMM d")} at ${venueName}\n\nGet on the free guestlist: ${shareUrl}`;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({ text: shareText });
+      } catch (err) {
+        // User cancelled
+      }
     } else {
-      createMutation.mutate(formData as EventInsert);
+      navigator.clipboard.writeText(shareText);
+      toast({ title: "Link copied!", description: "Share it with your friends." });
     }
   };
 
-  const openEditDialog = (event: Event) => {
-    setEditingEvent(event);
-    setFormData({
-      name: event.name,
-      date: event.date,
-      time: event.time,
-      venue: event.venue,
-      capacity: event.capacity,
-      description: event.description || "",
-      image_url: event.image_url || "", // ADDED: Include image_url in edit
-      status: event.status,
-    });
-    setIsDialogOpen(true);
-  };
-
-  const getStatusColor = (status: EventStatus) => {
-    switch (status) {
-      case "upcoming":
-        return "bg-primary/20 text-primary border-primary/30";
-      case "live":
-        return "bg-success/20 text-success border-success/30";
-      case "past":
-        return "bg-muted text-muted-foreground border-muted";
-      default:
-        return "";
-    }
-  };
-
-  return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Events</h1>
-          <p className="text-muted-foreground mt-1">
-            Manage your live music sessions
-          </p>
-        </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="gradient-purple text-primary-foreground hover:opacity-90">
-              <Plus className="w-4 h-4 mr-2" />
-              Create Event
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px] bg-card border-border max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="text-foreground">
-                {editingEvent ? "Edit Event" : "Create New Event"}
-              </DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Event Name *</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Sunset Sessions Vol. 1"
-                  required
-                  className="bg-input border-border"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="date">Date *</Label>
-                  <Input
-                    id="date"
-                    type="date"
-                    value={formData.date}
-                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                    required
-                    className="bg-input border-border"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="time">Time *</Label>
-                  <Input
-                    id="time"
-                    type="time"
-                    value={formData.time}
-                    onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-                    required
-                    className="bg-input border-border"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="venue">Venue *</Label>
-                  <Input
-                    id="venue"
-                    value={formData.venue}
-                    onChange={(e) => setFormData({ ...formData, venue: e.target.value })}
-                    placeholder="Potato Head Beach Club"
-                    required
-                    className="bg-input border-border"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="capacity">Capacity *</Label>
-                  <Input
-                    id="capacity"
-                    type="number"
-                    value={formData.capacity}
-                    onChange={(e) => setFormData({ ...formData, capacity: parseInt(e.target.value) || 0 })}
-                    required
-                    min="1"
-                    className="bg-input border-border"
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="status">Status *</Label>
-                <Select
-                  value={formData.status}
-                  onValueChange={(value: EventStatus) => setFormData({ ...formData, status: value })}
-                >
-                  <SelectTrigger className="bg-input border-border">
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="upcoming">Upcoming</SelectItem>
-                    <SelectItem value="live">Live</SelectItem>
-                    <SelectItem value="past">Past</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              {/* ADDED: Image URL field */}
-              <div className="space-y-2">
-                <Label htmlFor="image_url">Event Image URL (Optional)</Label>
-                <Input
-                  id="image_url"
-                  type="url"
-                  value={formData.image_url}
-                  onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                  placeholder="https://example.com/event-image.jpg"
-                  className="bg-input border-border"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Leave empty if you don't have an image yet
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="description">Description (Optional)</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Event description..."
-                  className="bg-input border-border resize-none"
-                  rows={3}
-                />
-              </div>
-              <div className="flex gap-3 justify-end pt-4">
-                <Button type="button" variant="outline" onClick={resetForm}>
-                  Cancel
-                </Button>
-                <Button type="submit" className="gradient-purple text-primary-foreground">
-                  {editingEvent ? "Update Event" : "Create Event"}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+  // Loading state
+  const isLoading = qrLoading || eventLoading;
+  
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
+    );
+  }
 
-      {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[...Array(6)].map((_, i) => (
-            <Card key={i} className="bg-card border-border animate-pulse">
-              <CardContent className="p-6">
-                <div className="h-6 bg-muted rounded w-3/4 mb-4" />
-                <div className="h-4 bg-muted rounded w-1/2 mb-2" />
-                <div className="h-4 bg-muted rounded w-2/3" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : events?.length === 0 ? (
-        <Card className="bg-card border-border">
-          <CardContent className="py-16 text-center">
-            <Calendar className="w-16 h-16 text-muted-foreground/30 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-foreground mb-2">
-              No events yet
-            </h3>
-            <p className="text-muted-foreground mb-4">
-              Create your first event to get started
+  // Invalid or expired link
+  if (!event) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-md text-center bg-card/80 backdrop-blur-xl border-border/50">
+          <CardContent className="pt-8 pb-6">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-destructive/10 flex items-center justify-center">
+              <span className="text-3xl">😕</span>
+            </div>
+            <h2 className="text-xl font-bold mb-2">Invalid Link</h2>
+            <p className="text-muted-foreground">
+              This guestlist link is invalid or has expired.
             </p>
-            <Button
-              onClick={() => setIsDialogOpen(true)}
-              className="gradient-purple text-primary-foreground"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Create Event
-            </Button>
           </CardContent>
         </Card>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {events?.map((event) => (
-            <Card
-              key={event.id}
-              className="bg-card border-border hover:border-primary/30 transition-colors group"
-            >
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <Badge
-                    variant="outline"
-                    className={getStatusColor(event.status)}
-                  >
-                    {event.status}
-                  </Badge>
-                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => openEditDialog(event)}
-                    >
-                      <Edit className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-destructive hover:text-destructive"
-                      onClick={() => deleteMutation.mutate(event.id)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-                <CardTitle className="text-lg text-foreground mt-2">
-                  {event.name}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Calendar className="w-4 h-4" />
-                  <span>{format(new Date(event.date), "MMM dd, yyyy")}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Clock className="w-4 h-4" />
-                  <span>{event.time?.slice(0, 5)}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <MapPin className="w-4 h-4" />
-                  <span>{event.venue}</span>
-                </div>
-                <div className="flex items-center justify-between pt-3 border-t border-border">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Users className="w-4 h-4 text-primary" />
-                    <span className="text-foreground font-medium">
-                      {guestCounts?.[event.id] || 0}
-                    </span>
-                    <span className="text-muted-foreground">
-                      / {event.capacity} guests
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+      </div>
+    );
+  }
+
+  // Event is not upcoming
+  if (event?.status !== "upcoming") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-md text-center bg-card/80 backdrop-blur-xl border-border/50">
+          <CardContent className="pt-8 pb-6">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
+              <Calendar className="w-8 h-8 text-muted-foreground" />
+            </div>
+            <h2 className="text-xl font-bold mb-2">Registration Closed</h2>
+            <p className="text-muted-foreground">
+              Registration for this event has ended.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Already registered state
+  if (registrationState === "already-registered") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
+          <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-violet-500/10 rounded-full blur-3xl" />
         </div>
-      )}
+
+        <Card className="w-full max-w-md text-center relative z-10 bg-card/80 backdrop-blur-xl border-border/50">
+          <CardContent className="pt-8 pb-6">
+            <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-primary/20 flex items-center justify-center">
+              <Heart className="w-10 h-10 text-primary" />
+            </div>
+            <h2 className="text-2xl font-bold mb-2">You're already on the guestlist! 🙌</h2>
+            <p className="text-muted-foreground mb-6">
+              We can't wait to see you at <span className="font-semibold text-foreground">{event?.name}</span>
+            </p>
+            <div className="bg-muted/50 rounded-lg p-4 text-left space-y-2 mb-6">
+              <div className="flex items-center gap-2 text-sm">
+                <Calendar className="w-4 h-4 text-primary" />
+                <span>{event?.date && format(new Date(event.date), "EEEE, MMMM d, yyyy")}</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <Clock className="w-4 h-4 text-primary" />
+                <span>{event?.time?.slice(0, 5)}</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <MapPin className="w-4 h-4 text-primary" />
+                <span>{venueName}</span>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <Button onClick={addToCalendar} variant="outline" className="flex-1 gap-2">
+                <CalendarPlus className="w-4 h-4" />
+                Save to Calendar
+              </Button>
+              <Button onClick={shareEvent} variant="outline" className="flex-1 gap-2">
+                <Share2 className="w-4 h-4" />
+                Share
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Success state
+  if (registrationState === "success") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
+          <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-violet-500/10 rounded-full blur-3xl" />
+        </div>
+
+        <Card className="w-full max-w-md text-center relative z-10 bg-card/80 backdrop-blur-xl border-border/50">
+          <CardContent className="pt-8 pb-6">
+            <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-primary/20 flex items-center justify-center animate-pulse">
+              <PartyPopper className="w-10 h-10 text-primary" />
+            </div>
+            <h2 className="text-2xl font-bold mb-2">You're on the list! 🎶</h2>
+            <p className="text-muted-foreground mb-2">
+              Doors open at <span className="font-semibold text-foreground">{event?.time?.slice(0, 5)}</span>
+            </p>
+            <p className="text-lg font-medium text-foreground mb-6">
+              See you at Bali Live Sessions.
+            </p>
+            <div className="bg-muted/50 rounded-lg p-4 text-left space-y-2 mb-6">
+              <div className="flex items-center gap-2 text-sm">
+                <Calendar className="w-4 h-4 text-primary" />
+                <span>{event?.date && format(new Date(event.date), "EEEE, MMMM d, yyyy")}</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <Clock className="w-4 h-4 text-primary" />
+                <span>{event?.time?.slice(0, 5)}</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <MapPin className="w-4 h-4 text-primary" />
+                <span>{venueName}</span>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <Button onClick={addToCalendar} variant="outline" className="flex-1 gap-2">
+                <CalendarPlus className="w-4 h-4" />
+                Save to Calendar
+              </Button>
+              <Button onClick={shareEvent} variant="outline" className="flex-1 gap-2">
+                <Share2 className="w-4 h-4" />
+                Share with a Friend
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Registration form
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Background */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-violet-500/10 rounded-full blur-3xl" />
+      </div>
+
+      <div className="relative z-10 min-h-screen flex flex-col">
+        {/* Header */}
+        <header className="p-4 flex justify-center">
+          <img src={blsLogo} alt="Bali Live Sessions" className="h-10 w-auto invert" />
+        </header>
+
+        <main className="flex-1 flex items-center justify-center p-4">
+          <Card className="w-full max-w-lg bg-card/80 backdrop-blur-xl border-border/50">
+            <CardHeader className="text-center pb-2">
+              {/* FREE Badge */}
+              <div className="flex justify-center mb-3">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/20 text-primary text-sm font-medium">
+                  <Sparkles className="w-4 h-4" />
+                  FREE Guestlist
+                </div>
+              </div>
+
+              <CardTitle className="text-2xl">{event?.name}</CardTitle>
+
+              <div className="flex flex-wrap justify-center gap-3 text-sm text-muted-foreground mt-2">
+                <span className="flex items-center gap-1">
+                  <Calendar className="w-4 h-4" />
+                  {event?.date && format(new Date(event.date), "EEE, MMM d")}
+                </span>
+                <span className="flex items-center gap-1">
+                  <Clock className="w-4 h-4" />
+                  {event?.time?.slice(0, 5)}
+                </span>
+                <span className="flex items-center gap-1">
+                  <MapPin className="w-4 h-4" />
+                  {venueName}
+                </span>
+              </div>
+
+              {event?.description && (
+                <CardDescription className="mt-3">{event.description}</CardDescription>
+              )}
+
+              {/* Attribution display */}
+              <p className="text-xs text-muted-foreground mt-3">
+                {promoter?.name ? (
+                  <>Invited by <span className="text-foreground font-medium">{promoter.name}</span></>
+                ) : (
+                  <>Presented by <span className="text-foreground font-medium">Bali Live Sessions</span></>
+                )}
+              </p>
+            </CardHeader>
+
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="fullName">Full Name *</Label>
+                  <Input
+                    id="fullName"
+                    placeholder="John Doe"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    required
+                    className="bg-input/50 border-border/50"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email *</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="you@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="bg-input/50 border-border/50"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="whatsapp">WhatsApp Number *</Label>
+                  <Input
+                    id="whatsapp"
+                    type="tel"
+                    placeholder="+62 812 345 6789"
+                    value={whatsapp}
+                    onChange={(e) => setWhatsapp(e.target.value)}
+                    required
+                    className="bg-input/50 border-border/50"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="dob">Date of Birth *</Label>
+                    <Input
+                      id="dob"
+                      type="date"
+                      value={dateOfBirth}
+                      onChange={(e) => setDateOfBirth(e.target.value)}
+                      required
+                      className="bg-input/50 border-border/50"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="nationality">Nationality *</Label>
+                    <Select value={nationality} onValueChange={setNationality} required>
+                      <SelectTrigger className="bg-input/50 border-border/50">
+                        <SelectValue placeholder="Select" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {NATIONALITIES.map((nat) => (
+                          <SelectItem key={nat} value={nat}>
+                            {nat}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <Button
+                  type="submit"
+                  className="w-full gradient-purple text-primary-foreground font-semibold text-lg py-6"
+                  disabled={registerMutation.isPending || !nationality}
+                >
+                  {registerMutation.isPending ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-5 h-5 mr-2" />
+                      Join the Guestlist
+                    </>
+                  )}
+                </Button>
+
+                <p className="text-xs text-center text-muted-foreground">
+                  By registering, you agree to receive event updates via WhatsApp and email.
+                </p>
+              </form>
+            </CardContent>
+          </Card>
+        </main>
+      </div>
     </div>
   );
 }
