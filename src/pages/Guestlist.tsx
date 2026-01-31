@@ -116,10 +116,14 @@ export default function Guestlist() {
             name,
             date,
             time,
-            venue,
             description,
             image_url,
-            status
+            status,
+            venues (
+              id,
+              name,
+              address
+            )
           )
         `)
         .eq("qr_code_identifier", code)
@@ -139,7 +143,14 @@ export default function Guestlist() {
 
       const { data, error } = await supabase
         .from("events")
-        .select("*")
+        .select(`
+          *,
+          venues (
+            id,
+            name,
+            address
+          )
+        `)
         .eq("id", eventIdParam)
         .eq("status", "upcoming")
         .maybeSingle();
@@ -155,6 +166,9 @@ export default function Guestlist() {
   const promoter = isPromoterLink ? (qrData?.promoters as any) : null;
   const eventId = event?.id;
   const promoterId = isPromoterLink ? qrData?.promoter_id : null;
+  
+  // Get venue name safely
+  const venueName = (event?.venues as any)?.name || "Venue TBA";
 
   // Track QR scan (only for promoter links)
   useEffect(() => {
@@ -283,7 +297,7 @@ export default function Guestlist() {
     
     const formatDate = (d: Date) => d.toISOString().replace(/-|:|\.\d{3}/g, "");
     
-    const calUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(event.name)}&dates=${formatDate(startDate)}/${formatDate(endDate)}&location=${encodeURIComponent(event.venue)}&details=${encodeURIComponent(`You're on the guestlist for ${event.name}!`)}`;
+    const calUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(event.name)}&dates=${formatDate(startDate)}/${formatDate(endDate)}&location=${encodeURIComponent(venueName)}&details=${encodeURIComponent(`You're on the guestlist for ${event.name}!`)}`;
     
     window.open(calUrl, "_blank");
   };
@@ -293,7 +307,7 @@ export default function Guestlist() {
     if (!event) return;
     
     const shareUrl = `${window.location.origin}/guestlist?event=${event.id}`;
-    const shareText = `Join me at ${event.name}! 🎶\n${format(new Date(event.date), "EEEE, MMMM d")} at ${event.venue}\n\nGet on the free guestlist: ${shareUrl}`;
+    const shareText = `Join me at ${event.name}! 🎶\n${format(new Date(event.date), "EEEE, MMMM d")} at ${venueName}\n\nGet on the free guestlist: ${shareUrl}`;
     
     if (navigator.share) {
       try {
@@ -385,7 +399,7 @@ export default function Guestlist() {
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <MapPin className="w-4 h-4 text-primary" />
-                <span>{event?.venue}</span>
+                <span>{venueName}</span>
               </div>
             </div>
             <div className="flex gap-3">
@@ -436,7 +450,7 @@ export default function Guestlist() {
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <MapPin className="w-4 h-4 text-primary" />
-                <span>{event?.venue}</span>
+                <span>{venueName}</span>
               </div>
             </div>
             <div className="flex gap-3">
@@ -494,7 +508,7 @@ export default function Guestlist() {
                 </span>
                 <span className="flex items-center gap-1">
                   <MapPin className="w-4 h-4" />
-                  {event?.venue}
+                  {venueName}
                 </span>
               </div>
 
