@@ -40,6 +40,7 @@ export default function Events() {
     venue: "",
     capacity: 100,
     description: "",
+    image_url: "", // ADDED: image_url field
     status: "upcoming",
   });
   const { toast } = useToast();
@@ -126,6 +127,7 @@ export default function Events() {
       venue: "",
       capacity: 100,
       description: "",
+      image_url: "", // ADDED: Reset image_url
       status: "upcoming",
     });
     setEditingEvent(null);
@@ -150,6 +152,7 @@ export default function Events() {
       venue: event.venue,
       capacity: event.capacity,
       description: event.description || "",
+      image_url: event.image_url || "", // ADDED: Include image_url in edit
       status: event.status,
     });
     setIsDialogOpen(true);
@@ -184,7 +187,7 @@ export default function Events() {
               Create Event
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px] bg-card border-border">
+          <DialogContent className="sm:max-w-[500px] bg-card border-border max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-foreground">
                 {editingEvent ? "Edit Event" : "Create New Event"}
@@ -192,7 +195,7 @@ export default function Events() {
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4 mt-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Event Name</Label>
+                <Label htmlFor="name">Event Name *</Label>
                 <Input
                   id="name"
                   value={formData.name}
@@ -204,7 +207,7 @@ export default function Events() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="date">Date</Label>
+                  <Label htmlFor="date">Date *</Label>
                   <Input
                     id="date"
                     type="date"
@@ -215,7 +218,7 @@ export default function Events() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="time">Time</Label>
+                  <Label htmlFor="time">Time *</Label>
                   <Input
                     id="time"
                     type="time"
@@ -228,7 +231,7 @@ export default function Events() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="venue">Venue</Label>
+                  <Label htmlFor="venue">Venue *</Label>
                   <Input
                     id="venue"
                     value={formData.venue}
@@ -239,19 +242,20 @@ export default function Events() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="capacity">Capacity</Label>
+                  <Label htmlFor="capacity">Capacity *</Label>
                   <Input
                     id="capacity"
                     type="number"
                     value={formData.capacity}
-                    onChange={(e) => setFormData({ ...formData, capacity: parseInt(e.target.value) })}
+                    onChange={(e) => setFormData({ ...formData, capacity: parseInt(e.target.value) || 0 })}
                     required
+                    min="1"
                     className="bg-input border-border"
                   />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="status">Status</Label>
+                <Label htmlFor="status">Status *</Label>
                 <Select
                   value={formData.status}
                   onValueChange={(value: EventStatus) => setFormData({ ...formData, status: value })}
@@ -266,8 +270,25 @@ export default function Events() {
                   </SelectContent>
                 </Select>
               </div>
+              
+              {/* ADDED: Image URL field */}
               <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
+                <Label htmlFor="image_url">Event Image URL (Optional)</Label>
+                <Input
+                  id="image_url"
+                  type="url"
+                  value={formData.image_url}
+                  onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
+                  placeholder="https://example.com/event-image.jpg"
+                  className="bg-input border-border"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Leave empty if you don't have an image yet
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="description">Description (Optional)</Label>
                 <Textarea
                   id="description"
                   value={formData.description}
